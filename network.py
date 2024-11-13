@@ -63,3 +63,28 @@ class DQN(nn.Module):
                 return torch.argmax(q_values).item()
         else:
             return random.randrange(self.n_actions)
+
+
+def optimize(policy_dqn, target_dqn, memory, optimizer, device):
+    if len(memory) < policy_dqn.batch_size:
+        return
+    
+    observation, action, next_observation, reward, terminated = memory.sample(batch_size=policy_dqn.batch_size)
+
+    # Stack previous observations
+    observation_batch = torch.stack(observation).to(device)
+    next_observation_batch = torch.stack(next_observation).to(device)
+    action_batch = torch.tensor(action, device=device, dtype=torch.int8).unsqueeze(1)
+    reward_batch = torch.tensor(reward, device=device, dtpye=torch.float32)
+    terminated_batch = torch.tensor(terminated, device=device, dtype=torch.int8)
+
+    q_values = policy_dqn(observation_batch).gather(1, action_batch).squeeze()
+    with torch.no_grad():
+        max_next_q_values = target_dqn(next_observation_batch).max(1)[0]
+        q_value_targets = reward_batch + (1 - terminated_batch) * (policy_dqn.gamma * max_next_q_values)
+
+    loss = F.mse_loss(q_values, q_value_targets)
+    optimizer.zero_grad()
+    loss.backward()
+    optimizer.step()
+    return loss.item()
