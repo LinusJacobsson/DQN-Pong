@@ -3,27 +3,24 @@ import torch
 import torch.nn as nn
 import torch.functional as F
 import numpy as np
+from collections import deque, namedtuple
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
+# Replay Memory class
+Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward', 'done'))
 class ReplayMemory:
     def __init__(self, capacity):
-        self.capacity = capacity
-        self.memory = []
-        self.position = 0
-    
-    def __len__(self):
-        return len(self.memory)
-    
-    def push(self, observation, action, next_observation, reward, terminated):
-        if len(self.memory) < self.capacity:
-            self.memory.append(None)
-        self.memory[self.position] = (observation, action, next_observation, reward, terminated)
-        self.position = (self.position + 1) % self.capacity
+        self.memory = deque([], maxlen=capacity)
+
+    def push(self, *args):
+        self.memory.append(Transition(*args))
 
     def sample(self, batch_size):
-        sample = random.sample(self.memory, batch_size)
-        return tuple(zip(*sample))
+        return random.sample(self.memory, batch_size)
+
+    def __len__(self):
+        return len(self.memory)
+
     
 
 class DQN(nn.Module):
@@ -63,6 +60,7 @@ class DQN(nn.Module):
                 return torch.argmax(q_values).item()
         else:
             return random.randrange(self.n_actions)
+
 
 
 def optimize(policy_dqn, target_dqn, memory, optimizer, device):
