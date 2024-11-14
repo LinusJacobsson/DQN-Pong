@@ -52,14 +52,14 @@ class DQN(nn.Module):
         x = self.fc2(x)
         return x 
     
-    def act(self, observation, step, exploit=False):
-        epsilon = self.eps_end + (self.eps_start - self.eps_end) * max(0, (self.decay_steps - step) / self.decay_steps)
+     # Refactored with linear decay and index return
+    def act(self, observation, steps_done, epsilon, epsilon_start, epsilon_end, decay, exploit=False):
+        epsilon = max(epsilon_end, epsilon_start - steps_done / decay)
         if exploit or random.random() > epsilon:
             with torch.no_grad():
-                q_values = self.forward(observation)
-                return torch.argmax(q_values).item()
-        else:
-            return random.randrange(self.n_actions)
+                q_index = self.forward(observation).max(1)[1].view(1, 1)
+                return q_index
+    
 
 
 
