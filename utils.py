@@ -1,6 +1,9 @@
 import torch
 import logging
 import os
+import gymnasium as gym
+import numpy as np
+from gymnasium.wrappers import AtariPreprocessing, FrameStack
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 def preprocess(state, env):
@@ -37,3 +40,24 @@ def setup_logger(log_dir):
 
     logger.info("Logging setup complete...")
     return logger
+
+def evaluate_policy(dqn, env_eval, args):
+
+    total_rewards = []
+    for _ in range(args.n_eval_episodes):
+        state, _ = env_eval.reset()
+        state = torch.from_numpy(np.array(state)).unsqueeze(0).to(device)
+        total_reward = 0
+        done = False
+        while not done:
+            with torch.no_grad():
+                action_index = dqn(state).max(1)[1].view(1, 1)
+            action = ACTION_SPACE[action_index.item()] # ACTION_SPACE is defined in evaluate.py
+            next_state, reward, terminated, truncated, _ = env_eval.step(action)
+            done = terminated or truncated
+            total_reward+= reward
+            next_state = torch.from_numpy(np.array(next_state)).unsqueeze(0).to(device)
+            state = next_state
+        total_rewards.append(total_reward)
+    env_eval.close()
+    return np.mean(total_rewards)
