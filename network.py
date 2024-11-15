@@ -36,7 +36,7 @@ class DQN(nn.Module):
         self.n_actions = config['n_actions']
         
         # Define layers
-        self.conv1 = nn.Conv2d(4, 32, kernal_size=8, stride=4, padding=0)
+        self.conv1 = nn.Conv2d(4, 32, kernel_size=8, stride=4, padding=0)
         self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=0)
         self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=0)
         self.fc1 = nn.Linear(3136, 512)
@@ -53,12 +53,14 @@ class DQN(nn.Module):
         return x 
     
      # Refactored with linear decay and index return
-    def act(self, observation, steps_done, epsilon, epsilon_start, epsilon_end, decay, exploit=False):
-        epsilon = max(epsilon_end, epsilon_start - steps_done / decay)
+    def act(self, state, steps_done, exploit=False):
+        epsilon = max(self.eps_end, self.eps_start - steps_done / self.decay_steps)
         if exploit or random.random() > epsilon:
             with torch.no_grad():
-                q_index = self.forward(observation).max(1)[1].view(1, 1)
+                q_index = self.forward(state).max(1)[1].view(1, 1)
                 return q_index
+        else:
+            return torch.tensor([[random.randrange(self.n_actions)]], device=device, dtype=torch.long)
     
 
 def optimize(policy_dqn, target_dqn, memory, optimizer, device):
