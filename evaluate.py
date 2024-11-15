@@ -11,7 +11,7 @@ import config
 # Import additional libraries for rendering
 import matplotlib.pyplot as plt
 from network import DQN
-
+from utils import evaluate_policy
 # Set up device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -41,13 +41,13 @@ if __name__ == '__main__':
 
     # Initialize environment
     env = gym.make(args.env, render_mode=render_mode, frameskip=1)
-    env. AtariPreprocessing(env, screen_size=84 grayscale_obs=True, frame_skip=4, noop_max, scale_obs=True)
+    env = AtariPreprocessing(env, screen_size=84, grayscale_obs=True, frame_skip=4, scale_obs=False)
     env = FrameStack(env, num_stack=4)
 
     if args.save_video:
         env = gym.wrappers.RecordVideo(env, './video/', episode_trigger=lambda episode_ird: True)
     
-    dqn = DQN(env_config=env_config).to(device)
+    dqn = DQN(env_config=env.config).to(device)
 
     # Sanitize name for environment
     safe_name = args.env.replace('/', '_')
@@ -59,5 +59,5 @@ if __name__ == '__main__':
 
     # Evaluate policy
     mean_reward = evaluate_policy(dqn, env, args, args.n_eval_episodes, render=args.render, verbose=True)
-    print(f'The policy got a mean return of {mean_return} over {args.n_eval_episodes} episodes.')
+    print(f'The policy got a mean return of {mean_reward} over {args.n_eval_episodes} episodes.')
     env.close()
