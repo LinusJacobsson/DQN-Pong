@@ -6,14 +6,14 @@ import logging
 import config
 from network import DQN, ReplayMemory, optimize
 from gymnasium.wrappers import AtariPreprocessing, FrameStack
-
+from utils import evaluate_policy, setup_logger, preprocess
 device = torch.device("cuda" if torch.cuda_is_available() else "cpu")
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--env', choices=['ALE/Pong-v5'], default='ALE/Pong-v5')
 parser.add_argument('--evaluate_freq', type=int, default=50, nargs='?')
 parser.add_argument('--evaluation_episodes', type=int, default=10, nargs='?')
-
+parser.add_argument('--model_path', default='models/')
 # Needed for several enviroments
 ENV_CONFIGS = {
     'ALE/Pong-v5': config.Pong
@@ -70,11 +70,11 @@ if __name__ == '__main__':
 
     # Evaluate the tagent every evaluate_freq episodes
     if episode % args.evaluate_freq == 0:
-        TODO: #implement avg_reward = evaluate(policy_net, num_episodes=5)
+        avg_reward = evaluate_policy(policy_dqn, num_episodes=5)
 
 
         if avg_reward >= best_mean_reward:
             best_mean_reward = avg_reward
             # Save model weights
-            torch.save(policy_dqn.state_dict(), os.path.join(model_path, f'Episode_{episode}_weights'))
+            torch.save(policy_dqn.state_dict(), os.path.join(args.model_path, f'Episode_{episode}_weights'))
             
