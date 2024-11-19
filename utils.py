@@ -6,12 +6,20 @@ import numpy as np
 from gymnasium.wrappers import AtariPreprocessing, FrameStack
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
+# utils.py
 def preprocess(state, env):
     if env in ['ALE/Pong-v5']:
-        return torch.tensor(state, device=device, dtype=torch.float32)
+        if isinstance(state, list):
+            # Concatenate list of arrays into a single array
+            state = np.array(state)
+        elif isinstance(state, np.ndarray):
+            pass  # State is already a NumPy array
+        else:
+            raise TypeError("State must be a list or a NumPy array.")
+        return torch.from_numpy(state).to(device=device, dtype=torch.float32).unsqueeze(0)
     else:
-        raise NotImplementedError("You are using an unsupported enviroment!")
-    
+        raise NotImplementedError("You are using an unsupported environment!")
+
 
 def setup_logger(log_dir):
     logger = logging.getLogger('DQN')
@@ -42,9 +50,9 @@ def setup_logger(log_dir):
     return logger
 
 def evaluate_policy(dqn, env_eval, args):
-
+    ACTION_SPACE = [2, 3]
     total_rewards = []
-    for _ in range(args.n_eval_episodes):
+    for _ in range(args.evaluation_episodes):
         state, _ = env_eval.reset()
         state = torch.from_numpy(np.array(state)).unsqueeze(0).to(device)
         total_reward = 0
