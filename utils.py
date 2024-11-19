@@ -54,11 +54,11 @@ def evaluate_policy(dqn, env_eval, args):
         done = False
         while not done:
             with torch.no_grad():
-                action_index = dqn(state).max(1)[1].view(1, 1)
-            action = ACTION_SPACE[action_index.item()] # ACTION_SPACE is defined in evaluate.py
+                action_index = dqn.act(state, steps_done=0, exploit=True)
+            action = ACTION_SPACE[action_index.item()]
             next_state, reward, terminated, truncated, _ = env_eval.step(action)
             done = terminated or truncated
-            total_reward+= reward
+            total_reward += reward
             next_state = torch.from_numpy(np.array(next_state)).unsqueeze(0).to(device)
             state = next_state
         total_rewards.append(total_reward)
