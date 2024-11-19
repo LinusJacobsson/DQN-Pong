@@ -9,17 +9,12 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # utils.py
 def preprocess(state, env):
     if env in ['ALE/Pong-v5']:
-        if isinstance(state, list):
-            # Concatenate list of arrays into a single array
-            state = np.array(state)
-        elif isinstance(state, np.ndarray):
-            pass  # State is already a NumPy array
-        else:
-            raise TypeError("State must be a list or a NumPy array.")
+        #print(f"Type before conversion: {type(state)}")  # Debugging
+        state = np.asarray(state)
+        #print(f"Type after conversion: {type(state)}")   # Debugging
         return torch.from_numpy(state).to(device=device, dtype=torch.float32).unsqueeze(0)
     else:
         raise NotImplementedError("You are using an unsupported environment!")
-
 
 def setup_logger(log_dir):
     logger = logging.getLogger('DQN')

@@ -1,7 +1,7 @@
 import random 
 import torch
 import torch.nn as nn
-import torch.functional as F
+import torch.nn.functional as F
 import numpy as np
 from collections import deque, namedtuple
 
@@ -39,18 +39,18 @@ class DQN(nn.Module):
         self.conv1 = nn.Conv2d(4, 32, kernel_size=8, stride=4, padding=0)
         self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=0)
         self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=0)
+        self.flatten = nn.Flatten()  # Use nn.Flatten as a layer
         self.fc1 = nn.Linear(3136, 512)
         self.fc2 = nn.Linear(512, self.n_actions)
 
-    
     def forward(self, x):
         x = F.relu(self.conv1(x))
         x = F.relu(self.conv2(x))
         x = F.relu(self.conv3(x))
-        x = self.flatten(x)
+        x = self.flatten(x)  # Apply flattening
         x = F.relu(self.fc1(x))
         x = self.fc2(x)
-        return x 
+        return x
     
      # Refactored with linear decay and index return
     def act(self, state, steps_done, exploit=False):
@@ -65,13 +65,13 @@ class DQN(nn.Module):
 
 def optimize(policy_dqn, target_dqn, memory, optimizer, device):
     batch_size = policy_dqn.batch_size
-
+    
     if len(memory) < batch_size:
         return
     
     transitions = memory.sample(batch_size)
     batch = Transition(*zip(*transitions))
-
+    #print(f'batch shape: {batch.shape}')
     state_batch = torch.cat(batch.state)
     action_batch = torch.cat(batch.action)
     reward_batch = torch.cat(batch.reward)
@@ -90,7 +90,8 @@ def optimize(policy_dqn, target_dqn, memory, optimizer, device):
     expected_state_action_values = reward_batch + policy_dqn.gamma * next_state_values
     
     # Compute loss and optimize
-    loss = nn.SmoothL1Loss(state_action_values, expected_state_action_values)
+    criterion = nn.SmoothL1Loss()
+    loss = criterion(state_action_values, expected_state_action_values)
     optimizer.zero_grad()
     loss.backward()
     # Gradient clip to stabilize learning
