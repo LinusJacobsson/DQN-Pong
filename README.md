@@ -1,4 +1,5 @@
 # Deep Q-Network (DQN) Implementation for Pong
+![Agent Playing Pong](videos/best_video.mp4){: width="800" height="800"}
 
 This repository contains an implementation of the Deep Q-Network (DQN) algorithm applied to the classic Atari game Pong. The DQN algorithm, introduced by Mnih et al. in 2015, combines Q-learning with deep neural networks to enable agents to learn control policies directly from high-dimensional sensory inputs. ([Read the paper](https://storage.googleapis.com/deepmind-media/dqn/DQNNaturePaper.pdf))
 
@@ -75,15 +76,10 @@ Replace `best_model.pth` with the filename of your saved model weights. The scri
 
 ### Training Performance
 
-The plot below shows the agent's reward progression over training episodes:
+The plot below shows the agent's reward progression over training episodes. Reward to between -21 and 21, with around 15 being considered human performance. It was trained for 3000 episodes, which corresponds to almost 10 days of gameplay, and managed a peak of 18.8 mean reward:
 
 ![Training Rewards](images/combined_rewards_plot.png)
 
-### Gameplay
-
-The following GIF demonstrates the trained agent playing Pong:
-
-![Agent Playing Pong](videos/evaluation_gif.gif)
 
 ---
 
