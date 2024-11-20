@@ -3,6 +3,7 @@ import logging
 import os
 import gymnasium as gym
 import numpy as np
+import matplotlib.pyplot as plt
 from gymnasium.wrappers import AtariPreprocessing, FrameStack
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -44,12 +45,12 @@ def setup_logger(log_dir):
     logger.info("Logging setup complete...")
     return logger
 
-def evaluate_policy(dqn, env_eval, args):
+def evaluate_policy(dqn, env_eval, args, render):
     ACTION_SPACE = [2, 3]
     total_rewards = []
-    for _ in range(args.evaluation_episodes):
+    for _ in range(args.n_eval_episodes):
         state, _ = env_eval.reset()
-        state = torch.from_numpy(np.array(state)).unsqueeze(0).to(device)
+        state = torch.from_numpy(np.array(state)).unsqueeze(0).to(device, dtype=torch.float32)  # Ensure float32
         total_reward = 0
         done = False
         while not done:
@@ -59,8 +60,17 @@ def evaluate_policy(dqn, env_eval, args):
             next_state, reward, terminated, truncated, _ = env_eval.step(action)
             done = terminated or truncated
             total_reward += reward
-            next_state = torch.from_numpy(np.array(next_state)).unsqueeze(0).to(device)
+            next_state = torch.from_numpy(np.array(next_state)).unsqueeze(0).to(device, dtype=torch.float32)  # Ensure float32
             state = next_state
         total_rewards.append(total_reward)
+        if render:
+            # Render the environment
+            frame = env_eval.render()
+            if frame is not None:
+                plt.imshow(frame)
+                plt.axis('off')
+                plt.show(block=False)
+                plt.pause(0.001)
+                plt.clf()
     env_eval.close()
     return np.mean(total_rewards)

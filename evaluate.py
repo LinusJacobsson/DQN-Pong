@@ -8,7 +8,6 @@ import torch.nn.functional as F
 import numpy as np
 import random
 import config
-# Import additional libraries for rendering
 import matplotlib.pyplot as plt
 from network import DQN
 from utils import evaluate_policy
@@ -18,10 +17,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 ACTION_SPACE = [2, 3]
 
 # Needed for several enviroments
-ENV_CONFIGS = {
-    'ALE/Pong-v5': config.Pong
-}
-
+CONFIG = config.Pong
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--env', choices=['ALE/Pong-v5'], default='ALE/Pong-v5')
@@ -34,7 +30,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    if args.save_videp or args.render:
+    if args.save_video or args.render:
         render_mode = 'rgb_array'
     else:
         render_mode = None
@@ -46,8 +42,7 @@ if __name__ == '__main__':
 
     if args.save_video:
         env = gym.wrappers.RecordVideo(env, './video/', episode_trigger=lambda episode_ird: True)
-    
-    dqn = DQN(env_config=env.config).to(device)
+    dqn = DQN(config=CONFIG).to(device)
 
     # Sanitize name for environment
     safe_name = args.env.replace('/', '_')
@@ -58,6 +53,6 @@ if __name__ == '__main__':
     dqn.eval() # Not really needed for current structure
 
     # Evaluate policy
-    mean_reward = evaluate_policy(dqn, env, args, args.n_eval_episodes, render=args.render, verbose=True)
+    mean_reward = evaluate_policy(dqn, env, args, render=args.render)
     print(f'The policy got a mean return of {mean_reward} over {args.n_eval_episodes} episodes.')
     env.close()
