@@ -77,13 +77,13 @@ Replace `best_model.pth` with the filename of your saved model weights. The scri
 
 The plot below shows the agent's reward progression over training episodes:
 
-![Training Rewards](images/combined_reward_plot.png)
+![Training Rewards](images/combined_rewards_plot.png)
 
 ### Gameplay
 
 The following GIF demonstrates the trained agent playing Pong:
 
-![Agent Playing Pong](videos/best_video.mp4)
+![Agent Playing Pong](videos/evaluation_gif.gif)
 
 ---
 
