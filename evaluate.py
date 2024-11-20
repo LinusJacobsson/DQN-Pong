@@ -1,58 +1,85 @@
+"""
+evaluate.py
+
+This script evaluates a trained DQN (Deep Q-Network) model on an Atari environment
+(e.g., Pong). It supports rendering, saving videos, and computing the average reward
+over a specified number of episodes.
+
+Usage:
+    python evaluate.py --env ALE/Pong-v5 --path <path_to_model_weights> --render --save_video
+"""
+
 import argparse
 import gymnasium as gym
 import torch
 import os
+from typing import Optional
 from gymnasium.wrappers import AtariPreprocessing, FrameStack
-import torch.nn as nn
-import torch.nn.functional as F
-import numpy as np
-import random
-import config
 import matplotlib.pyplot as plt
 from network import DQN
 from utils import evaluate_policy
+import config
+
 # Set up device
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-ACTION_SPACE = [2, 3]
+# Default action space for Pong (Up, Down)
+ACTION_SPACE: list[int] = [2, 3]
 
-# Needed for several enviroments
-CONFIG = config.Pong
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--env', choices=['ALE/Pong-v5'], default='ALE/Pong-v5')
-    parser.add_argument('--path', type=str, help='Path to stored DQN model.')
-    parser.add_argument('--n_eval_episodes', type=int, default=10, help='Number of evaluation episodes.', nargs='?')
-    parser.add_argument('--render', dest='render', action='store_true', help='Render the environment.')
-    parser.add_argument('--save_video', dest='save_video', action='store_true', help='Save the episodes as video.')
-    parser.set_defaults(render=False)
-    parser.set_defaults(save_video=False)
+def main() -> None:
+    # Parse command-line arguments
+    parser: argparse.ArgumentParser = argparse.ArgumentParser(
+        description="Evaluate a trained DQN model on an Atari environment."
+    )
+    parser.add_argument('--env', choices=['ALE/Pong-v5'], default='ALE/Pong-v5',
+                        help="The Atari environment to evaluate (default: 'ALE/Pong-v5').")
+    parser.add_argument('--path', type=str, required=True,
+                        help="Path to the stored DQN model weights.")
+    parser.add_argument('--n_eval_episodes', type=int, default=10,
+                        help="Number of evaluation episodes (default: 10).")
+    parser.add_argument('--render', action='store_true',
+                        help="Render the environment during evaluation.")
+    parser.add_argument('--save_video', action='store_true',
+                        help="Save the evaluation episodes as video.")
+    args: argparse.Namespace = parser.parse_args()
 
-    args = parser.parse_args()
+    # Set render mode
+    render_mode: Optional[str] = 'rgb_array' if args.save_video or args.render else None
 
-    if args.save_video or args.render:
-        render_mode = 'rgb_array'
-    else:
-        render_mode = None
-
-    # Initialize environment
-    env = gym.make(args.env, render_mode=render_mode, frameskip=1)
+    # Initialize the environment
+    video_folder: str = os.path.join('.', 'video')
+    env: gym.Env = gym.make(args.env, render_mode=render_mode, frameskip=1)
     env = AtariPreprocessing(env, screen_size=84, grayscale_obs=True, frame_skip=4, scale_obs=False)
     env = FrameStack(env, num_stack=4)
 
     if args.save_video:
-        env = gym.wrappers.RecordVideo(env, './video/', episode_trigger=lambda episode_ird: True)
-    dqn = DQN(config=CONFIG).to(device)
+        if not os.path.exists(video_folder):
+            os.makedirs(video_folder)
+        else:
+            print(f"Warning: Video folder {video_folder} already exists. Existing videos may be overwritten.")
+        env = gym.wrappers.RecordVideo(env, video_folder, episode_trigger=lambda episode_idx: True)
 
-    # Sanitize name for environment
-    safe_name = args.env.replace('/', '_')
+    # Load the DQN model
+    try:
+        dqn: DQN = DQN(config=config.Pong).to(device)
+    except AttributeError:
+        raise ImportError("The configuration for Pong is missing. Ensure 'config.py' is correctly set up.")
+
+    if not os.path.exists(args.path):
+        raise FileNotFoundError(f"Model weights file not found at {args.path}. Please provide a valid path.")
 
     # Load model weights
-    weights = torch.load(args.path, map_location=device)
+    weights: dict = torch.load(args.path, map_location=device)
     dqn.load_state_dict(weights)
-    dqn.eval() # Not really needed for current structure
+    dqn.eval()  # Set to evaluation mode
 
     # Evaluate policy
-    mean_reward = evaluate_policy(dqn, env, args, render=args.render)
-    print(f'The policy got a mean return of {mean_reward} over {args.n_eval_episodes} episodes.')
+    print(f"Evaluating policy on {args.env} for {args.n_eval_episodes} episodes...")
+    mean_reward: float = evaluate_policy(dqn, env, args.n_eval_episodes, render=args.render)
+    print(f"The policy achieved a mean return of {mean_reward:.2f} over {args.n_eval_episodes} episodes.")
+
+    # Clean up
     env.close()
+
+if __name__ == '__main__':
+    main()
