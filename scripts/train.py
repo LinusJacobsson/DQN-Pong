@@ -4,11 +4,11 @@ import torch
 import os
 import logging
 import numpy as np
-import config
+import config.config
 from typing import Dict, List
-from network import DQN, ReplayMemory, optimize
+from models.network import DQN
 from gymnasium.wrappers import AtariPreprocessing, FrameStack
-from utils import evaluate_policy, preprocess, setup_logger
+from utils.utils import evaluate_policy, preprocess, setup_logger, ReplayMemory, optimize
 
 # Set device
 device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

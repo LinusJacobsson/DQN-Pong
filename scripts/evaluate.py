@@ -16,9 +16,9 @@ import os
 from typing import Optional
 from gymnasium.wrappers import AtariPreprocessing, FrameStack
 import matplotlib.pyplot as plt
-from network import DQN
-from utils import evaluate_policy
-import config
+from models.network import DQN
+from utils.utils import evaluate_policy, preprocess, setup_logger, ReplayMemory, optimize
+import config.config
 
 # Set up device
 device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

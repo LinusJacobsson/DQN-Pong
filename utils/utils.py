@@ -6,7 +6,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from gymnasium.wrappers import AtariPreprocessing, FrameStack
 from typing import Any, Union
-
+from collections import deque, namedtuple
+import random
 # Set device
 device: torch.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -119,3 +120,79 @@ def evaluate_policy(
 
     env_eval.close()
     return np.mean(total_rewards)
+
+
+# Define Transition named tuple for replay memory
+Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward', 'done'))
+
+
+class ReplayMemory:
+    def __init__(self, capacity: int) -> None:
+        self.memory: deque[Transition] = deque([], maxlen=capacity)
+
+    def push(self, *args: Union[np.ndarray, torch.Tensor]) -> None:
+        """Store a transition in replay memory."""
+        self.memory.append(Transition(*args))
+
+    def sample(self, batch_size: int) -> List[Transition]:
+        """Sample a batch of transitions from memory."""
+        return random.sample(self.memory, batch_size)
+
+    def __len__(self) -> int:
+        """Return the current size of the replay memory."""
+        return len(self.memory)
+
+
+def optimize(
+    policy_dqn: DQN,
+    target_dqn: DQN,
+    memory: ReplayMemory,
+    optimizer: torch.optim.Optimizer,
+    device: torch.device,
+) -> None:
+    """
+    Optimize the policy DQN using a batch of transitions from replay memory.
+    
+    Args:
+        policy_dqn: The policy DQN to optimize.
+        target_dqn: The target DQN used for computing target Q-values.
+        memory: Replay memory containing past transitions.
+        optimizer: Optimizer for updating the policy network.
+        device: The device (CPU or GPU) to use for computations.
+    """
+    batch_size: int = policy_dqn.batch_size
+
+    if len(memory) < batch_size:
+        return
+
+    # Sample a batch of transitions
+    transitions: List[Transition] = memory.sample(batch_size)
+    batch: Transition = Transition(*zip(*transitions))
+
+    # Prepare tensors
+    state_batch: torch.Tensor = torch.cat(batch.state)
+    action_batch: torch.Tensor = torch.cat(batch.action)
+    reward_batch: torch.Tensor = torch.cat(batch.reward)
+    next_state_batch: torch.Tensor = torch.cat(batch.next_state)
+    done_batch: torch.Tensor = torch.cat(batch.done)
+
+    # Compute Q(s_t, a)
+    state_action_values: torch.Tensor = policy_dqn.forward(state_batch).gather(1, action_batch)
+
+    # Compute V(s_{t+1}) for next states
+    with torch.no_grad():
+        next_state_values: torch.Tensor = target_dqn.forward(next_state_batch).max(1)[0].unsqueeze(1)
+        next_state_values[done_batch] = 0.0  # Zero for terminal states
+
+    # Compute expected Q-values
+    expected_state_action_values: torch.Tensor = reward_batch + policy_dqn.gamma * next_state_values
+
+    # Compute loss
+    criterion: nn.SmoothL1Loss = nn.SmoothL1Loss()
+    loss: torch.Tensor = criterion(state_action_values, expected_state_action_values)
+
+    # Optimize the model
+    optimizer.zero_grad()
+    loss.backward()
+    torch.nn.utils.clip_grad_norm_(policy_dqn.parameters(), 1)
+    optimizer.step()
