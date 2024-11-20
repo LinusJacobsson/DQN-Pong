@@ -5,9 +5,12 @@ import gymnasium as gym
 import numpy as np
 import matplotlib.pyplot as plt
 from gymnasium.wrappers import AtariPreprocessing, FrameStack
-from typing import Any, Union
+from typing import Any, Union, List
 from collections import deque, namedtuple
 import random
+from models.network import DQN
+import torch.nn as nn
+import torch.nn.functional as F
 # Set device
 device: torch.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
